@@ -1,0 +1,284 @@
+
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <title>🍽️ แอปคำนวณแคลอรี่และคาร์โบไฮเดรต</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+
+    <style>
+        /* ✅ สไตล์ทั่วไป */
+        body {
+            font-family: 'Kanit', sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f4f4f9;
+            color: #333;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 40px auto;
+            background-color: #fff;
+            padding: 20px 30px;
+            border-radius: 15px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+
+        h2, h3, h4 {
+            text-align: center;
+            color: #4CAF50;
+        }
+
+        label {
+            display: block;
+            margin: 10px 0 5px;
+            font-weight: bold;
+        }
+
+        input, select, button {
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 15px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            font-size: 16px;
+        }
+
+        input:focus, select:focus {
+            border-color: #4CAF50;
+            outline: none;
+        }
+
+        /* ✅ ปุ่ม */
+        button {
+            background-color: #4CAF50;
+            color: white;
+            cursor: pointer;
+            border: none;
+            transition: background-color 0.3s ease;
+        }
+
+        button:hover {
+            background-color: #388E3C;
+        }
+
+        /* ✅ รายการอาหาร */
+        ul {
+            list-style: none;
+            padding: 0;
+        }
+
+        li {
+            background-color: #f9f9f9;
+            margin: 5px 0;
+            padding: 10px;
+            border-radius: 8px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        li button {
+            background-color: #f44336;
+            border: none;
+            padding: 5px 10px;
+            border-radius: 5px;
+        }
+
+        li button:hover {
+            background-color: #d32f2f;
+        }
+
+        /* ✅ สีพิเศษ */
+        .highlight { color: red; font-weight: bold; }
+        .success { color: green; font-weight: bold; }
+        .info { color: #2196F3; font-weight: bold; }
+
+        /* ✅ ปฏิทิน */
+        .flatpickr-calendar {
+            border-radius: 10px;
+        }
+
+        /* ✅ แผนภูมิ */
+        canvas {
+            margin: 20px auto;
+            display: block;
+        }
+
+        /* ✅ Media Queries */
+        @media (max-width: 600px) {
+            input, select, button {
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+<div class="container">
+    <h2>🍽️ คำนวณแคลอรี่และคาร์โบไฮเดรตที่ควรได้รับ</h2>
+
+    <!-- ✅ ฟอร์มคำนวณ -->
+    <form id="calorie-form">
+        <label>น้ำหนัก (กก.): <input type="number" id="weight" required></label>
+        <label>ส่วนสูง (ซม.): <input type="number" id="height" required></label>
+        <label>เพศ:
+            <select id="gender">
+                <option value="male">ชาย</option>
+                <option value="female">หญิง</option>
+            </select>
+        </label>
+        <label>อายุ: <input type="number" id="age" required></label>
+        <label>ระดับการออกกำลังกาย:
+            <select id="activity">
+                <option value="1.2">ไม่ออกกำลังกาย</option>
+                <option value="1.375">เล็กน้อย (1-3 ครั้ง/สัปดาห์)</option>
+                <option value="1.55">ปานกลาง (3-5 ครั้ง/สัปดาห์)</option>
+                <option value="1.725">เยอะ (6-7 ครั้ง/สัปดาห์)</option>
+                <option value="1.9">ออกกำลังกายทุกวัน</option>
+            </select>
+        </label>
+        <label>น้ำหนักเป้าหมาย (กก.): <input type="number" id="target-weight" required></label>
+        <button type="button" onclick="calculateCalories()">🚀 คำนวณ</button>
+    </form>
+
+    <div id="result"></div>
+
+    <hr>
+
+    <h3>🍛 บันทึกเมนูอาหาร</h3>
+    <input type="text" id="food-search" placeholder="🔍 ค้นหาเมนูอาหาร..." oninput="searchFood()">
+    <ul id="food-list"></ul>
+
+    <h4>เมนูอาหารที่เลือก:</h4>
+    <ul id="selected-foods"></ul>
+
+    <canvas id="calorieChart" width="400" height="400"></canvas>
+
+    <hr>
+
+    <h3>📊 รายงานการทานอาหารรายสัปดาห์/รายเดือน</h3>
+    <input type="text" id="calendar" placeholder="📅 เลือกวันที่">
+    <button onclick="viewWeeklyReport()">📅 รายงานรายสัปดาห์</button>
+    <button onclick="viewMonthlyReport()">📆 รายงานรายเดือน</button>
+
+    <canvas id="weeklyChart" width="400" height="200"></canvas>
+    <canvas id="monthlyChart" width="400" height="200" style="display:none;"></canvas>
+
+</div>
+
+<script>
+    // ✅ ข้อมูลอาหารตัวอย่าง
+    const foodDatabase = [
+        { name: "ข้าวสวย", calories: 130, carbs: 28 },
+        { name: "อกไก่", calories: 165, carbs: 0 },
+        { name: "ส้มตำ", calories: 120, carbs: 15 },
+        { name: "ไข่เจียว", calories: 220, carbs: 1 },
+        { name: "น้ำส้ม", calories: 90, carbs: 21 }
+    ];
+
+    let calorieGoal = 0, carbGoal = 0, totalCalories = 0, totalCarbs = 0, selectedFoods = [];
+    let calorieChart, foodData = JSON.parse(localStorage.getItem('foodData')) || {};
+
+    // ✅ คำนวณแคลอรี่ที่ควรได้รับ
+    function calculateCalories() {
+        const weight = parseFloat(document.getElementById('weight').value);
+        const height = parseFloat(document.getElementById('height').value);
+        const age = parseInt(document.getElementById('age').value);
+        const gender = document.getElementById('gender').value;
+        const activity = parseFloat(document.getElementById('activity').value);
+
+        let BMR = (gender === "male")
+            ? 10 * weight + 6.25 * height - 5 * age + 5
+            : 10 * weight + 6.25 * height - 5 * age - 161;
+
+        calorieGoal = BMR * activity;
+        carbGoal = (calorieGoal * 0.5) / 4;
+
+        document.getElementById('result').innerHTML = `
+            <p>🎯 แคลอรี่ที่ควรได้รับ: <span class="success">${calorieGoal.toFixed(0)} kcal</span></p>
+            <p>🎯 คาร์โบไฮเดรตที่ควรได้รับ: <span class="success">${carbGoal.toFixed(0)} g</span></p>
+        `;
+
+        updateChart();
+    }
+
+    // ✅ ค้นหาเมนูอาหาร
+    function searchFood() {
+        const searchTerm = document.getElementById('food-search').value.toLowerCase();
+        const filteredFoods = foodDatabase.filter(food => food.name.toLowerCase().includes(searchTerm));
+        const foodList = document.getElementById('food-list');
+        foodList.innerHTML = "";
+
+        filteredFoods.forEach(food => {
+            const li = document.createElement('li');
+            li.innerHTML = `${food.name} - ${food.calories} kcal, ${food.carbs} g คาร์บ 
+                <button onclick="addFood('${food.name}')">➕</button>`;
+            foodList.appendChild(li);
+        });
+    }
+
+    // ✅ เพิ่มอาหารเข้าเมนู
+    function addFood(foodName) {
+        const food = foodDatabase.find(f => f.name === foodName);
+        selectedFoods.push(food);
+        totalCalories += food.calories;
+        totalCarbs += food.carbs;
+        updateSelectedFoods();
+        updateChart();
+        checkOverConsumption();
+    }
+
+    // ✅ อัพเดทรายการอาหารที่เลือก
+    function updateSelectedFoods() {
+        const list = document.getElementById('selected-foods');
+        list.innerHTML = "";
+        selectedFoods.forEach(food => {
+            const li = document.createElement('li');
+            li.innerText = `${food.name} - ${food.calories} kcal, ${food.carbs} g คาร์บ`;
+            list.appendChild(li);
+        });
+    }
+
+    // ✅ อัพเดทแผนภูมิวงกลม
+    function updateChart() {
+        const ctx = document.getElementById('calorieChart').getContext('2d');
+        if (calorieChart) calorieChart.destroy();
+
+        calorieChart = new Chart(ctx, {
+            type: 'doughnut',
+            data: {
+                labels: ['ทานไปแล้ว', 'เหลือ', 'เกินเป้าหมาย'],
+                datasets: [{
+                    data: [totalCalories, Math.max(calorieGoal - totalCalories, 0), Math.max(totalCalories - calorieGoal, 0)],
+                    backgroundColor: ['#FFEB3B', '#BDBDBD', '#F44336']
+                }]
+            },
+            options: { plugins: { legend: { position: 'bottom' } } }
+        });
+    }
+
+    // ✅ แจ้งเตือนเมื่อทานเกินเป้า
+    function checkOverConsumption() {
+        if (totalCalories > calorieGoal) alert("⚠️ คุณทานแคลอรี่เกินเป้าหมาย!");
+        if (totalCarbs > carbGoal) alert("⚠️ คุณทานคาร์โบไฮเดรตเกินเป้าหมาย!");
+    }
+
+    // ✅ ใช้ Flatpickr
+    flatpickr("#calendar", {
+        dateFormat: "Y-m-d"
+    });
+
+    // ✅ โหลดข้อมูลล่าสุดเมื่อเข้าเว็บ
+    window.onload = () => {
+        const today = new Date().toISOString().split('T')[0];
+        if (!foodData[today]) foodData[today] = [];
+    };
+</script>
+
+</body>
+</html>
